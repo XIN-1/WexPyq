@@ -11,6 +11,13 @@
     self.title = @"朋友圈查询";
     self.view.backgroundColor = [UIColor whiteColor];
     
+    // 添加关闭按钮
+    UIBarButtonItem *closeButton = [[UIBarButtonItem alloc] initWithTitle:@"关闭" 
+                                                                   style:UIBarButtonItemStyleDone 
+                                                                  target:self 
+                                                                  action:@selector(closeButtonTapped)];
+    self.navigationItem.leftBarButtonItem = closeButton;
+    
     self.menuItems = @[
         @{@"title": @"查询单个好友", @"icon": @"👤", @"desc": @"查询指定好友的最近朋友圈"},
         @{@"title": @"查询多个好友", @"icon": @"👥", @"desc": @"批量查询多个好友的最近朋友圈"},
@@ -18,6 +25,10 @@
     ];
     
     [self setupTableView];
+}
+
+- (void)closeButtonTapped {
+    [self.navigationController dismissViewControllerAnimated:YES completion:nil];
 }
 
 - (void)setupTableView {

@@ -261,6 +261,13 @@ static void addWexPyqButton() {
 
 %hook MMSettingViewController
 
+- (void)viewDidLoad {
+    %orig;
+    
+    NSLog(@"[WexPyq] MMSettingViewController viewDidLoad called");
+    logToFile(@"[WexPyq] MMSettingViewController viewDidLoad called");
+}
+
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
     
@@ -271,66 +278,37 @@ static void addWexPyqButton() {
     @autoreleasepool {
         UIView *view = self.view;
         if (view) {
-            // 查找设置页面的tableView
-            for (UIView *subview in view.subviews) {
-                if ([subview isKindOfClass:[UITableView class]]) {
-                    UITableView *tableView = (UITableView *)subview;
-                    NSLog(@"[WexPyq] Found tableView: %@", tableView);
-                    logToFile(@"[WexPyq] Found tableView");
+            NSLog(@"[WexPyq] View bounds: %@", NSStringFromCGRect(view.bounds));
+            logToFile([NSString stringWithFormat:@"[WexPyq] View bounds: %@", NSStringFromCGRect(view.bounds)]);
+            
+            // 直接在设置页面顶部添加一个明显的设置按钮
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ 
+                @autoreleasepool {
+                    UIButton *settingButton = [UIButton buttonWithType:UIButtonTypeSystem];
+                    settingButton.frame = CGRectMake(20, 80, view.bounds.size.width - 40, 60);
+                    [settingButton setTitle:@"朋友圈查询" forState:UIControlStateNormal];
+                    [settingButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+                    settingButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.48 blue:1.0 alpha:1.0];
+                    settingButton.layer.cornerRadius = 10;
+                    settingButton.titleLabel.font = [UIFont systemFontOfSize:18 weight:UIFontWeightMedium];
                     
-                    // 尝试添加设置项
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ 
-                        @autoreleasepool {
-                            // 尝试获取tableView的dataSource
-                            id dataSource = [tableView dataSource];
-                            NSLog(@"[WexPyq] TableView dataSource: %@", dataSource);
-                            logToFile([NSString stringWithFormat:@"[WexPyq] TableView dataSource: %@", dataSource]);
-                            
-                            // 尝试获取section数量
-                            NSInteger sectionCount = 1;
-                            if ([dataSource respondsToSelector:@selector(numberOfSectionsInTableView:)]) {
-                                sectionCount = [dataSource numberOfSectionsInTableView:tableView];
-                            }
-                            NSLog(@"[WexPyq] Number of sections: %ld", (long)sectionCount);
-                            logToFile([NSString stringWithFormat:@"[WexPyq] Number of sections: %ld", (long)sectionCount]);
-                            
-                            // 尝试在最后一个section添加设置项
-                            if (sectionCount > 0) {
-                                NSInteger lastSection = sectionCount - 1;
-                                NSInteger rowCount = 0;
-                                if ([dataSource respondsToSelector:@selector(tableView:numberOfRowsInSection:)]) {
-                                    rowCount = [dataSource tableView:tableView numberOfRowsInSection:lastSection];
-                                }
-                                NSLog(@"[WexPyq] Number of rows in last section: %ld", (long)rowCount);
-                                logToFile([NSString stringWithFormat:@"[WexPyq] Number of rows in last section: %ld", (long)rowCount]);
-                                
-                                // 尝试添加一个简单的设置开关按钮
-                            UIButton *settingButton = [UIButton buttonWithType:UIButtonTypeSystem];
-                            settingButton.frame = CGRectMake(20, 20, tableView.bounds.size.width - 40, 50);
-                            [settingButton setTitle:@"朋友圈查询" forState:UIControlStateNormal];
-                            [settingButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
-                            settingButton.backgroundColor = [UIColor colorWithRed:0.9 green:0.9 blue:0.9 alpha:1.0];
-                            settingButton.layer.cornerRadius = 8;
-                            
-                            // 添加点击事件
-                            [settingButton addTarget:settingButton action:@selector(performClick:) forControlEvents:UIControlEventTouchUpInside];
-                            objc_setAssociatedObject(settingButton, &buttonTappedKey, ^{ 
-                                NSLog(@"[WexPyq] Setting button tapped");
-                                logToFile(@"[WexPyq] Setting button tapped");
-                                toggleWexPyq();
-                            }, OBJC_ASSOCIATION_COPY);
-                            
-                            [view addSubview:settingButton];
-                            settingButton.layer.zPosition = CGFLOAT_MAX;
-                            NSLog(@"[WexPyq] Setting button added");
-                            logToFile(@"[WexPyq] Setting button added");
-                            }
-                        }
-                    });
+                    // 添加点击事件
+                    [settingButton addTarget:settingButton action:@selector(performClick:) forControlEvents:UIControlEventTouchUpInside];
+                    objc_setAssociatedObject(settingButton, &buttonTappedKey, ^{ 
+                        NSLog(@"[WexPyq] Setting button tapped");
+                        logToFile(@"[WexPyq] Setting button tapped");
+                        toggleWexPyq();
+                    }, OBJC_ASSOCIATION_COPY);
                     
-                    break;
+                    [view addSubview:settingButton];
+                    settingButton.layer.zPosition = CGFLOAT_MAX;
+                    NSLog(@"[WexPyq] Setting button added at position: %@", NSStringFromCGRect(settingButton.frame));
+                    logToFile([NSString stringWithFormat:@"[WexPyq] Setting button added at position: %@", NSStringFromCGRect(settingButton.frame)]);
                 }
-            }
+            });
+        } else {
+            NSLog(@"[WexPyq] ERROR: View is nil");
+            logToFile(@"[WexPyq] ERROR: View is nil");
         }
     }
 }

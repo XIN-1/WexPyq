@@ -8,7 +8,18 @@
     self.title = @"查询单个好友";
     self.view.backgroundColor = [UIColor whiteColor];
     
+    // 添加返回按钮
+    UIBarButtonItem *backButton = [[UIBarButtonItem alloc] initWithTitle:@"返回" 
+                                                                   style:UIBarButtonItemStylePlain 
+                                                                  target:self 
+                                                                  action:@selector(backButtonTapped)];
+    self.navigationItem.leftBarButtonItem = backButton;
+    
     [self setupUI];
+}
+
+- (void)backButtonTapped {
+    [self.navigationController popViewControllerAnimated:YES];
 }
 
 - (void)setupUI {
@@ -35,13 +46,18 @@
     [self.view addSubview:self.tableView];
     [self.view addSubview:self.queryButton];
     
-    self.friendList = @[
-        @{@"name": @"张三", @"avatar": @"👨", @"status": @"在线"},
-        @{@"name": @"李四", @"avatar": @"👩", @"status": @"离线"},
-        @{@"name": @"王五", @"avatar": @"👨", @"status": @"在线"},
-        @{@"name": @"赵六", @"avatar": @"👩", @"status": @"忙碌"},
-        @{@"name": @"孙七", @"avatar": @"👨", @"status": @"在线"}
-    ];
+    // 尝试读取微信真实好友列表
+    self.friendList = [self getWeChatFriends];
+    if (!self.friendList || self.friendList.count == 0) {
+        // 如果读取失败，使用模拟数据
+        self.friendList = @[
+            @{@"name": @"张三", @"avatar": @"👨", @"status": @"在线"},
+            @{@"name": @"李四", @"avatar": @"👩", @"status": @"离线"},
+            @{@"name": @"王五", @"avatar": @"👨", @"status": @"在线"},
+            @{@"name": @"赵六", @"avatar": @"👩", @"status": @"忙碌"},
+            @{@"name": @"孙七", @"avatar": @"👨", @"status": @"在线"}
+        ];
+    }
 }
 
 #pragma mark - UITableViewDataSource
@@ -115,6 +131,46 @@
 }
 
 #pragma mark - Actions
+
+- (NSArray *)getWeChatFriends {
+    NSMutableArray *friends = [NSMutableArray array];
+    
+    @try {
+        // 尝试查找微信的好友列表类
+        Class CContactMgrClass = NSClassFromString(@"CContactMgr");
+        if (CContactMgrClass) {
+            // 尝试获取单例
+            id contactMgr = [CContactMgrClass performSelector:NSSelectorFromString(@"sharedManager")];
+            if (contactMgr) {
+                // 尝试获取好友列表
+                NSArray *allContacts = [contactMgr performSelector:NSSelectorFromString(@"getAllContacts")];
+                if (allContacts && [allContacts isKindOfClass:[NSArray class]]) {
+                    for (id contact in allContacts) {
+                        // 尝试获取好友信息
+                        NSString *userName = [contact performSelector:NSSelectorFromString(@"userName")];
+                        NSString *nickName = [contact performSelector:NSSelectorFromString(@"nickName")];
+                        
+                        if (userName && nickName) {
+                            // 排除特殊账号和自己
+                            if (![userName hasPrefix:@"wxid_"] && ![userName isEqualToString:@"filehelper"]) {
+                                NSDictionary *friendInfo = @{
+                                    @"name": nickName,
+                                    @"avatar": @"👤",
+                                    @"status": @"在线"
+                                };
+                                [friends addObject:friendInfo];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"[WexPyq] Exception when getting WeChat friends: %@", exception);
+    }
+    
+    return friends;
+}
 
 - (void)queryMoments {
     if (!self.selectedFriendName) {
