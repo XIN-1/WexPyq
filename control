@@ -1,0 +1,9 @@
+Package: com.wexpyq.wechat
+Name: WexPyq
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: WeChat Moments Query Plugin
+Maintainer: WexPyq
+Author: WexPyq
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000)

@@ -1,0 +1,189 @@
+name: Build WexPyq
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Debug mode'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  THEOS: ${{ github.workspace }}/theos
+
+jobs:
+  build:
+    name: Build WexPyq
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+    
+    - name: Show Xcode version
+      run: |
+        xcodebuild -version
+        xcrun --show-sdk-path
+    
+    - name: Cache Theos
+      id: cache-theos
+      uses: actions/cache@v3
+      with:
+        path: theos
+        key: ${{ runner.os }}-theos-${{ hashFiles('**/Makefile') }}
+        restore-keys: |
+          ${{ runner.os }}-theos-
+    
+    - name: Install Theos
+      if: steps.cache-theos.outputs.cache-hit != 'true'
+      run: |
+        echo "Installing Theos..."
+        bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+        mv ~/theos ${{ github.workspace }}/theos
+    
+    - name: Verify Theos installation
+      run: |
+        echo "THEOS path: $THEOS"
+        ls -la $THEOS
+        echo "Theos version:"
+        cat $THEOS/VERSION 2>/dev/null || echo "No version file"
+    
+    - name: Show build info
+      run: |
+        echo "=========================================="
+        echo "Build Information"
+        echo "=========================================="
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Actor: ${{ github.actor }}"
+        echo "Workflow: ${{ github.workflow }}"
+        echo "Run number: ${{ github.run_number }}"
+        echo "Debug mode: ${{ github.event.inputs.debug }}"
+        echo "=========================================="
+    
+    - name: Clean build
+      run: |
+        echo "Cleaning previous build..."
+        make clean || true
+        rm -rf .theos/obj packages || true
+    
+    - name: Build dylib
+      run: |
+        echo "Building dylib..."
+        if [ "${{ github.event.inputs.debug }}" = "true" ]; then
+          make DEBUG=1
+        else
+          make
+        fi
+    
+    - name: Package deb
+      run: |
+        echo "Packaging deb..."
+        make package
+    
+    - name: Find and display generated files
+      run: |
+        echo "=========================================="
+        echo "Generated Files"
+        echo "=========================================="
+        
+        echo ""
+        echo "=== Dylib files ==="
+        find .theos/obj -name "*.dylib" 2>/dev/null | while read file; do
+          echo "Found: $file"
+          ls -lh "$file"
+        done
+        
+        echo ""
+        echo "=== Deb files ==="
+        find packages -name "*.deb" 2>/dev/null | while read file; do
+          echo "Found: $file"
+          ls -lh "$file"
+          dpkg-deb -I "$file" 2>/dev/null || true
+        done
+        
+        echo ""
+        echo "=== Packages directory ==="
+        ls -la packages/ || echo "No packages directory"
+        
+        echo "=========================================="
+    
+    - name: Get version info
+      id: version
+      run: |
+        VERSION=$(grep "^Version:" control | awk '{print $2}')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Package version: $VERSION"
+    
+    - name: Upload dylib artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: WexPyq-dylib-${{ steps.version.outputs.version }}
+        path: |
+          .theos/obj/**/*.dylib
+        retention-days: 90
+        if-no-files-found: warn
+    
+    - name: Upload deb artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: WexPyq-deb-${{ steps.version.outputs.version }}
+        path: packages/*.deb
+        retention-days: 90
+        if-no-files-found: warn
+    
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          packages/*.deb
+          .theos/obj/**/*.dylib
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Build summary
+      if: always()
+      run: |
+        echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "- WexPyq-dylib-${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- WexPyq-deb-${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Build failed!"
+        echo "Please check the logs above for details."
+        echo "Common issues:"
+        echo "1. Theos installation failed - retry the workflow"
+        echo "2. Compilation errors - check your code"
+        echo "3. Network issues - retry the workflow"
