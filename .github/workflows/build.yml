@@ -72,6 +72,13 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-theos-
     
+    - name: Clean old Theos cache
+      if: steps.cache-theos.outputs.cache-hit != 'true'
+      run: |
+        echo "Cleaning old Theos cache if exists..."
+        rm -rf theos || true
+        echo "Cache cleaned"
+    
     - name: Install Theos
       if: steps.cache-theos.outputs.cache-hit != 'true'
       run: |
