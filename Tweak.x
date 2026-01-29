@@ -95,7 +95,16 @@ static void addWexPyqButton() {
 
 - (void)buttonTapped:(id)sender {
     NSLog(@"[WexPyq] Button tapped!");
-    showWexPyqMenu();
+    
+    wexPyqEnabled = !wexPyqEnabled;
+    [[NSUserDefaults standardUserDefaults] setBool:wexPyqEnabled forKey:@"WexPyqEnabled"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
+    NSLog(@"[WexPyq] Toggled to: %@", wexPyqEnabled ? @"ON" : @"OFF");
+    
+    if (wexPyqEnabled) {
+        showWexPyqMenu();
+    }
 }
 
 @end
@@ -115,96 +124,6 @@ static void addWexPyqButton() {
             });
         });
     }
-}
-
-%end
-
-@interface MMSettingViewController
-- (void)viewDidLoad;
-- (UITableView *)tableView;
-@end
-
-%hook MMSettingViewController
-
-- (void)viewDidLoad {
-    %orig;
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        UITableView *tableView = [self valueForKey:@"tableView"];
-        if (!tableView) return;
-        
-        wexPyqEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"WexPyqEnabled"];
-        
-        UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"WexPyqSettingCell"];
-        cell.textLabel.text = @"朋友圈查询";
-        cell.detailTextLabel.text = wexPyqEnabled ? @"已开启" : @"已关闭";
-        cell.imageView.image = [UIImage systemImageNamed:@"magnifyingglass.circle"];
-        cell.accessoryType = wexPyqEnabled ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
-        
-        NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
-        [tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
-    });
-}
-
-%end
-
-@interface UITableView (WexPyq)
-- (UITableViewCell *)cellForRowAtIndexPath:(NSIndexPath *)indexPath;
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath;
-@end
-
-%hook UITableView
-
-- (UITableViewCell *)cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    UITableViewCell *cell = %orig;
-    
-    if (indexPath.section == 0 && indexPath.row == 0) {
-        static NSString *cellIdentifier = @"WexPyqSettingCell";
-        cell = [self dequeueReusableCellWithIdentifier:cellIdentifier];
-        
-        if (!cell) {
-            wexPyqEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"WexPyqEnabled"];
-            
-            cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:cellIdentifier];
-            cell.textLabel.text = @"朋友圈查询";
-            cell.detailTextLabel.text = wexPyqEnabled ? @"已开启" : @"已关闭";
-            cell.imageView.image = [UIImage systemImageNamed:@"magnifyingglass.circle"];
-            cell.accessoryType = wexPyqEnabled ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
-        }
-    }
-    
-    return cell;
-}
-
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (indexPath.section == 0 && indexPath.row == 0) {
-        [tableView deselectRowAtIndexPath:indexPath animated:YES];
-        
-        wexPyqEnabled = !wexPyqEnabled;
-        [[NSUserDefaults standardUserDefaults] setBool:wexPyqEnabled forKey:@"WexPyqEnabled"];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        
-        NSLog(@"[WexPyq] Toggled to: %@", wexPyqEnabled ? @"ON" : @"OFF");
-        
-        [tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
-        
-        if (wexPyqEnabled) {
-            if (wexPyqButton) {
-                [wexPyqButton removeFromSuperview];
-                wexPyqButton = nil;
-            }
-            addWexPyqButton();
-        } else {
-            if (wexPyqButton) {
-                [wexPyqButton removeFromSuperview];
-                wexPyqButton = nil;
-            }
-        }
-        
-        return;
-    }
-    
-    %orig;
 }
 
 %end
