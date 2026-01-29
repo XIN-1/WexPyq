@@ -1,6 +1,5 @@
 #import <UIKit/UIKit.h>
 #import "WexPyqMainController.h"
-#import <Preferences/Preferences.h>
 
 static UIButton *wexPyqButton = nil;
 static BOOL wexPyqEnabled = YES;
