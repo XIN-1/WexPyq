@@ -37,6 +37,18 @@ jobs:
       with:
         xcode-version: latest-stable
     
+    - name: Install GNU Make
+      run: |
+        echo "Installing GNU Make for parallel building..."
+        brew install make
+        
+        # Add GNU Make to PATH
+        echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
+        
+        # Verify installation
+        echo "GNU Make version:"
+        $(brew --prefix make)/libexec/gnubin/make --version
+    
     - name: Show Xcode version
       run: |
         xcodebuild -version
