@@ -1,9 +1,6 @@
 #import <UIKit/UIKit.h>
 #import "WexPyqMainController.h"
 
-@interface WexPyq : NSObject
-@end
-
 static void showWexPyqMenu() {
     NSLog(@"[WexPyq] Showing menu...");
     
@@ -72,7 +69,7 @@ static void showWexPyqMenu() {
 - (UITableViewCell *)cellForRowAtIndexPath:(NSIndexPath *)indexPath;
 @end
 
-%hook UITableView (WexPyq)
+%hook UITableView
 
 - (UITableViewCell *)cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     UITableViewCell *cell = %orig;
