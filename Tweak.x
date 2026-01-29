@@ -1,5 +1,4 @@
 #import <UIKit/UIKit.h>
-#import "WexPyqMainController.h"
 
 static UIButton *wexPyqButton = nil;
 static BOOL wexPyqEnabled = YES;
@@ -16,13 +15,9 @@ static void logToFile(NSString *message) {
         return;
     }
     
-    NSLog(@"[WexPyq] Home path: %@", homePath);
-    
     NSString *documentsPath = [homePath stringByAppendingPathComponent:@"Documents"];
-    NSLog(@"[WexPyq] Documents path: %@", documentsPath);
     
     if (![fileManager fileExistsAtPath:documentsPath]) {
-        NSLog(@"[WexPyq] INFO: Documents directory does not exist, creating...");
         NSError *error = nil;
         [fileManager createDirectoryAtPath:documentsPath 
                withIntermediateDirectories:YES 
@@ -32,121 +27,127 @@ static void logToFile(NSString *message) {
             NSLog(@"[WexPyq] ERROR: Failed to create Documents directory: %@", error);
             return;
         }
-        NSLog(@"[WexPyq] SUCCESS: Created Documents directory");
     }
     
     NSString *logPath = [documentsPath stringByAppendingPathComponent:@"WexPyq.log"];
-    NSLog(@"[WexPyq] Log path: %@", logPath);
     
-    NSString *content = [NSString stringWithFormat:@"%@\n", timestamp];
+    // 读取现有日志内容
+    NSMutableString *existingContent = [NSMutableString string];
+    if ([fileManager fileExistsAtPath:logPath]) {
+        NSError *error = nil;
+        NSString *content = [NSString stringWithContentsOfFile:logPath 
+                                                      encoding:NSUTF8StringEncoding 
+                                                         error:&error];
+        if (!error && content) {
+            [existingContent appendString:content];
+        }
+    }
     
+    // 添加新日志
+    [existingContent appendFormat:@"%@\n", timestamp];
+    
+    // 写入日志文件
     NSError *error = nil;
-    [content writeToFile:logPath 
-              atomically:YES 
-                encoding:NSUTF8StringEncoding 
-                   error:&error];
+    [existingContent writeToFile:logPath 
+                      atomically:YES 
+                        encoding:NSUTF8StringEncoding 
+                           error:&error];
     if (error) {
         NSLog(@"[WexPyq] ERROR: Failed to write log: %@", error);
-    } else {
-        NSLog(@"[WexPyq] SUCCESS: Log written to file");
     }
 }
 
 static void showWexPyqMenu() {
-    NSString *message = @"showWexPyqMenu called"; 
-    NSLog(@"[WexPyq] ============= %@ =============", message);
-    logToFile([NSString stringWithFormat:@"[WexPyq] ============= %@ =============", message]);
-    
-    WexPyqMainController *mainController = [[WexPyqMainController alloc] init];
-    NSLog(@"[WexPyq] Created main controller: %p", mainController);
-    
-    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:mainController];
-    NSLog(@"[WexPyq] Created navigation controller: %p", navController);
-    
-    navController.modalPresentationStyle = UIModalPresentationFullScreen;
-    
-    UIWindow *keyWindow = nil;
-    if (@available(iOS 13.0, *)) {
-        NSSet<UIScene *> *scenes = [UIApplication sharedApplication].connectedScenes;
-        NSLog(@"[WexPyq] Connected scenes count: %lu", (unsigned long)scenes.count);
-        for (UIScene *scene in scenes) {
-            NSLog(@"[WexPyq] Scene: %@, class: %@", scene, NSStringFromClass([scene class]));
-            if ([scene isKindOfClass:[UIWindowScene class]]) {
-                UIWindowScene *windowScene = (UIWindowScene *)scene;
-                NSLog(@"[WexPyq] Window scene windows count: %lu", (unsigned long)windowScene.windows.count);
-                for (UIWindow *window in windowScene.windows) {
-                    NSLog(@"[WexPyq] Window: %p, isKeyWindow: %d, bounds: %@", window, window.isKeyWindow, NSStringFromCGRect(window.bounds));
-                    if (window.isKeyWindow) {
-                        keyWindow = window;
-                        NSLog(@"[WexPyq] Found key window: %p", keyWindow);
-                        break;
+    @autoreleasepool {
+        NSLog(@"[WexPyq] showWexPyqMenu called");
+        logToFile(@"[WexPyq] showWexPyqMenu called");
+        
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"朋友圈查询" message:@"插件功能开发中" preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
+        
+        UIWindow *keyWindow = nil;
+        if (@available(iOS 13.0, *)) {
+            NSSet<UIScene *> *scenes = [UIApplication sharedApplication].connectedScenes;
+            for (UIScene *scene in scenes) {
+                if ([scene isKindOfClass:[UIWindowScene class]]) {
+                    UIWindowScene *windowScene = (UIWindowScene *)scene;
+                    for (UIWindow *window in windowScene.windows) {
+                        if (window.isKeyWindow) {
+                            keyWindow = window;
+                            break;
+                        }
                     }
                 }
+                if (keyWindow) break;
             }
-            if (keyWindow) break;
+        }
+        
+        if (!keyWindow) {
+            keyWindow = [UIApplication sharedApplication].windows.firstObject;
+        }
+        
+        if (keyWindow && keyWindow.rootViewController) {
+            NSLog(@"[WexPyq] Showing alert...");
+            logToFile(@"[WexPyq] Showing alert...");
+            [keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
+        } else {
+            NSLog(@"[WexPyq] ERROR: No rootViewController found!");
+            logToFile(@"[WexPyq] ERROR: No rootViewController found!");
         }
     }
+}
+
+static void toggleWexPyq() {
+    wexPyqEnabled = !wexPyqEnabled;
+    [[NSUserDefaults standardUserDefaults] setBool:wexPyqEnabled forKey:@"WexPyqEnabled"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
     
-    if (!keyWindow) {
-        keyWindow = [UIApplication sharedApplication].windows.firstObject;
-        NSLog(@"[WexPyq] Fallback to first window: %p", keyWindow);
-    }
+    NSLog(@"[WexPyq] Toggled to: %@", wexPyqEnabled ? @"ON" : @"OFF");
+    logToFile([NSString stringWithFormat:@"[WexPyq] Toggled to: %@", wexPyqEnabled ? @"ON" : @"OFF"]);
     
-    if (!keyWindow) {
-        NSLog(@"[WexPyq] ERROR: No key window found!");
-        logToFile(@"[WexPyq] ERROR: No key window found!");
-        return;
-    }
-    
-    NSLog(@"[WexPyq] Key window bounds: %@", NSStringFromCGRect(keyWindow.bounds));
-    NSLog(@"[WexPyq] Key window rootViewController: %p", keyWindow.rootViewController);
-    
-    UIViewController *rootViewController = keyWindow.rootViewController;
-    if (rootViewController) {
-        NSLog(@"[WexPyq] SUCCESS: Presenting menu...");
-        logToFile(@"[WexPyq] SUCCESS: Presenting menu...");
-        [rootViewController presentViewController:navController animated:YES completion:^{ 
-            NSLog(@"[WexPyq] SUCCESS: Menu presented successfully");
-            logToFile(@"[WexPyq] SUCCESS: Menu presented successfully");
-        }];
-    } else {
-        NSLog(@"[WexPyq] ERROR: No rootViewController found!");
-        logToFile(@"[WexPyq] ERROR: No rootViewController found!");
+    if (wexPyqEnabled) {
+        showWexPyqMenu();
     }
 }
 
 static void addWexPyqButton() {
-    NSString *message = @"addWexPyqButton called"; 
-    NSLog(@"[WexPyq] ============= %@ =============", message);
-    logToFile([NSString stringWithFormat:@"[WexPyq] ============= %@ =============", message]);
+    NSLog(@"[WexPyq] addWexPyqButton called");
+    logToFile(@"[WexPyq] addWexPyqButton called");
     
     if (wexPyqButton) {
-        NSLog(@"[WexPyq] INFO: Button already exists, skipping");
-        logToFile(@"[WexPyq] INFO: Button already exists, skipping");
+        NSLog(@"[WexPyq] Button already exists, returning");
+        logToFile(@"[WexPyq] Button already exists, returning");
         return;
     }
     
     wexPyqEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"WexPyqEnabled"];
-    NSLog(@"[WexPyq] INFO: wexPyqEnabled from defaults: %d", wexPyqEnabled);
-    logToFile([NSString stringWithFormat:@"[WexPyq] INFO: wexPyqEnabled from defaults: %d", wexPyqEnabled]);
+    NSLog(@"[WexPyq] Current enabled state: %@", wexPyqEnabled ? @"YES" : @"NO");
+    logToFile([NSString stringWithFormat:@"[WexPyq] Current enabled state: %@", wexPyqEnabled ? @"YES" : @"NO"]);
     
     if (!wexPyqEnabled) {
-        NSLog(@"[WexPyq] INFO: Plugin disabled, not adding button");
-        logToFile(@"[WexPyq] INFO: Plugin disabled, not adding button");
+        NSLog(@"[WexPyq] Plugin disabled, skipping button creation");
+        logToFile(@"[WexPyq] Plugin disabled, skipping button creation");
         return;
     }
     
     UIWindow *keyWindow = nil;
     if (@available(iOS 13.0, *)) {
         NSSet<UIScene *> *scenes = [UIApplication sharedApplication].connectedScenes;
-        NSLog(@"[WexPyq] INFO: Connected scenes count: %lu", (unsigned long)scenes.count);
+        NSLog(@"[WexPyq] Found %lu scenes", (unsigned long)scenes.count);
+        logToFile([NSString stringWithFormat:@"[WexPyq] Found %lu scenes", (unsigned long)scenes.count]);
+        
         for (UIScene *scene in scenes) {
             if ([scene isKindOfClass:[UIWindowScene class]]) {
                 UIWindowScene *windowScene = (UIWindowScene *)scene;
+                NSLog(@"[WexPyq] Found UIWindowScene with %lu windows", (unsigned long)windowScene.windows.count);
+                logToFile([NSString stringWithFormat:@"[WexPyq] Found UIWindowScene with %lu windows", (unsigned long)windowScene.windows.count]);
+                
                 for (UIWindow *window in windowScene.windows) {
+                    NSLog(@"[WexPyq] Checking window: %@, isKeyWindow: %@", window, window.isKeyWindow ? @"YES" : @"NO");
                     if (window.isKeyWindow) {
                         keyWindow = window;
-                        NSLog(@"[WexPyq] SUCCESS: Found key window: %p", keyWindow);
+                        NSLog(@"[WexPyq] Found key window: %@", keyWindow);
+                        logToFile([NSString stringWithFormat:@"[WexPyq] Found key window: %@", keyWindow]);
                         break;
                     }
                 }
@@ -157,17 +158,18 @@ static void addWexPyqButton() {
     
     if (!keyWindow) {
         keyWindow = [UIApplication sharedApplication].windows.firstObject;
-        NSLog(@"[WexPyq] INFO: Fallback to first window: %p", keyWindow);
+        NSLog(@"[WexPyq] Using first window as fallback: %@", keyWindow);
+        logToFile([NSString stringWithFormat:@"[WexPyq] Using first window as fallback: %@", keyWindow]);
     }
     
     if (!keyWindow) {
-        NSLog(@"[WexPyq] ERROR: No key window found!");
-        logToFile(@"[WexPyq] ERROR: No key window found!");
+        NSLog(@"[WexPyq] ERROR: No window found!");
+        logToFile(@"[WexPyq] ERROR: No window found!");
         return;
     }
     
-    NSLog(@"[WexPyq] SUCCESS: Key window found, bounds: %@", NSStringFromCGRect(keyWindow.bounds));
-    logToFile([NSString stringWithFormat:@"[WexPyq] SUCCESS: Key window found, bounds: %@", NSStringFromCGRect(keyWindow.bounds)]);
+    NSLog(@"[WexPyq] Window bounds: %@", NSStringFromCGRect(keyWindow.bounds));
+    logToFile([NSString stringWithFormat:@"[WexPyq] Window bounds: %@", NSStringFromCGRect(keyWindow.bounds)]);
     
     wexPyqButton = [UIButton buttonWithType:UIButtonTypeSystem];
     wexPyqButton.frame = CGRectMake(keyWindow.bounds.size.width/2 - 25, 100, 50, 50);
@@ -175,45 +177,53 @@ static void addWexPyqButton() {
     wexPyqButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.48 blue:1.0 alpha:1.0];
     wexPyqButton.layer.cornerRadius = 25;
     wexPyqButton.titleLabel.font = [UIFont systemFontOfSize:24];
-    [wexPyqButton addTarget:wexPyqButton action:@selector(buttonTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [wexPyqButton addTarget:self action:@selector(buttonTapped:) forControlEvents:UIControlEventTouchUpInside];
     
     [keyWindow addSubview:wexPyqButton];
-    
-    // Set button layer zPosition to make it appear on top
     wexPyqButton.layer.zPosition = CGFLOAT_MAX;
     
-    NSLog(@"[WexPyq] SUCCESS: Button added to window successfully at position: %@", NSStringFromCGRect(wexPyqButton.frame));
-    logToFile([NSString stringWithFormat:@"[WexPyq] SUCCESS: Button added to window successfully at position: %@", NSStringFromCGRect(wexPyqButton.frame)]);
+    NSLog(@"[WexPyq] Button added successfully at position: %@", NSStringFromCGRect(wexPyqButton.frame));
+    logToFile([NSString stringWithFormat:@"[WexPyq] Button added successfully at position: %@", NSStringFromCGRect(wexPyqButton.frame)]);
 }
 
-@interface WexPyqButton : UIButton
+void buttonTapped(UIButton *sender) {
+    NSLog(@"[WexPyq] Button tapped");
+    logToFile(@"[WexPyq] Button tapped");
+    toggleWexPyq();
+}
+
+@interface MMSettingViewController
 @end
 
-@implementation WexPyqButton
+%hook MMSettingViewController
 
-- (void)buttonTapped:(id)sender {
-    NSString *message = @"buttonTapped called"; 
-    NSLog(@"[WexPyq] ============= %@ =============", message);
-    logToFile([NSString stringWithFormat:@"[WexPyq] ============= %@ =============", message]);
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
     
-    wexPyqEnabled = !wexPyqEnabled;
-    NSLog(@"[WexPyq] INFO: Toggled to: %@", wexPyqEnabled ? @"ON" : @"OFF");
+    NSLog(@"[WexPyq] MMSettingViewController appeared");
+    logToFile(@"[WexPyq] MMSettingViewController appeared");
     
-    [[NSUserDefaults standardUserDefaults] setBool:wexPyqEnabled forKey:@"WexPyqEnabled"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    
-    logToFile([NSString stringWithFormat:@"[WexPyq] INFO: Toggled to: %@", wexPyqEnabled ? @"ON" : @"OFF"]);
-    
-    if (wexPyqEnabled) {
-        NSLog(@"[WexPyq] INFO: Showing menu...");
-        showWexPyqMenu();
-    } else {
-        NSLog(@"[WexPyq] INFO: Plugin disabled, menu not shown");
-        logToFile(@"[WexPyq] INFO: Plugin disabled, menu not shown");
+    // 添加设置开关
+    @autoreleasepool {
+        UIView *view = self.view;
+        if (view) {
+            // 查找设置页面的tableView
+            for (UIView *subview in view.subviews) {
+                if ([subview isKindOfClass:[UITableView class]]) {
+                    UITableView *tableView = (UITableView *)subview;
+                    NSLog(@"[WexPyq] Found tableView: %@", tableView);
+                    logToFile(@"[WexPyq] Found tableView");
+                    
+                    // 这里可以尝试添加设置项
+                    // 由于微信版本差异，暂时只记录日志
+                    break;
+                }
+            }
+        }
     }
 }
 
-@end
+%end
 
 %hook UIViewController
 
@@ -221,16 +231,9 @@ static void addWexPyqButton() {
     %orig;
     
     NSString *bundleIdentifier = [NSBundle mainBundle].bundleIdentifier;
-    NSLog(@"[WexPyq] INFO: viewDidAppear called for: %@", bundleIdentifier);
-    
     if ([bundleIdentifier isEqualToString:@"com.tencent.xin"]) {
-        NSLog(@"[WexPyq] SUCCESS: WeChat detected!");
-        logToFile(@"[WexPyq] SUCCESS: WeChat detected!");
-        
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
-            NSLog(@"[WexPyq] INFO: Scheduling button addition in 1 second...");
-            logToFile(@"[WexPyq] INFO: Scheduling button addition in 1 second...");
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 addWexPyqButton();
             });
@@ -241,26 +244,18 @@ static void addWexPyqButton() {
 %end
 
 %ctor {
-    NSString *message = @"Plugin loaded"; 
-    NSLog(@"[WexPyq] ============= %@ =============", message);
-    logToFile([NSString stringWithFormat:@"[WexPyq] ============= %@ =============", message]);
-    
-    NSLog(@"[WexPyq] INFO: Current application: %@", [NSBundle mainBundle].bundleIdentifier);
-    logToFile([NSString stringWithFormat:@"[WexPyq] INFO: Current application: %@", [NSBundle mainBundle].bundleIdentifier]);
-    
-    NSLog(@"[WexPyq] INFO: Home directory: %@", NSHomeDirectory());
-    logToFile([NSString stringWithFormat:@"[WexPyq] INFO: Home directory: %@", NSHomeDirectory()]);
+    NSLog(@"[WexPyq] Plugin loaded");
+    logToFile(@"[WexPyq] Plugin loaded");
     
     wexPyqEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"WexPyqEnabled"];
-    NSLog(@"[WexPyq] INFO: Initial state: %@", wexPyqEnabled ? @"ON" : @"OFF");
-    logToFile([NSString stringWithFormat:@"[WexPyq] INFO: Initial state: %@", wexPyqEnabled ? @"ON" : @"OFF"]);
+    NSLog(@"[WexPyq] Initial state: %@", wexPyqEnabled ? @"ON" : @"OFF");
+    logToFile([NSString stringWithFormat:@"[WexPyq] Initial state: %@", wexPyqEnabled ? @"ON" : @"OFF"]);
     
-    // 强制开启插件
     if (!wexPyqEnabled) {
-        NSLog(@"[WexPyq] INFO: Forcing plugin to ON state");
         wexPyqEnabled = YES;
         [[NSUserDefaults standardUserDefaults] setBool:wexPyqEnabled forKey:@"WexPyqEnabled"];
         [[NSUserDefaults standardUserDefaults] synchronize];
-        logToFile(@"[WexPyq] INFO: Forced plugin to ON state");
+        NSLog(@"[WexPyq] Forced to ON state");
+        logToFile(@"[WexPyq] Forced to ON state");
     }
 }
