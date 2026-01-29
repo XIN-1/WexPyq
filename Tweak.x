@@ -64,37 +64,79 @@ static void showWexPyqMenu() {
         NSLog(@"[WexPyq] showWexPyqMenu called");
         logToFile(@"[WexPyq] showWexPyqMenu called");
         
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"朋友圈查询" message:@"插件功能开发中" preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
-        
-        UIWindow *keyWindow = nil;
-        if (@available(iOS 13.0, *)) {
-            NSSet<UIScene *> *scenes = [UIApplication sharedApplication].connectedScenes;
-            for (UIScene *scene in scenes) {
-                if ([scene isKindOfClass:[UIWindowScene class]]) {
-                    UIWindowScene *windowScene = (UIWindowScene *)scene;
-                    for (UIWindow *window in windowScene.windows) {
-                        if (window.isKeyWindow) {
-                            keyWindow = window;
-                            break;
+        // 导入控制器头文件
+        Class WexPyqMainControllerClass = NSClassFromString(@"WexPyqMainController");
+        if (WexPyqMainControllerClass) {
+            NSLog(@"[WexPyq] Found WexPyqMainController class");
+            logToFile(@"[WexPyq] Found WexPyqMainController class");
+            
+            UIViewController *mainController = [[WexPyqMainControllerClass alloc] init];
+            UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:mainController];
+            navController.modalPresentationStyle = UIModalPresentationFullScreen;
+            
+            UIWindow *keyWindow = nil;
+            if (@available(iOS 13.0, *)) {
+                NSSet<UIScene *> *scenes = [UIApplication sharedApplication].connectedScenes;
+                for (UIScene *scene in scenes) {
+                    if ([scene isKindOfClass:[UIWindowScene class]]) {
+                        UIWindowScene *windowScene = (UIWindowScene *)scene;
+                        for (UIWindow *window in windowScene.windows) {
+                            if (window.isKeyWindow) {
+                                keyWindow = window;
+                                break;
+                            }
                         }
                     }
+                    if (keyWindow) break;
                 }
-                if (keyWindow) break;
             }
-        }
-        
-        if (!keyWindow) {
-            keyWindow = [UIApplication sharedApplication].windows.firstObject;
-        }
-        
-        if (keyWindow && keyWindow.rootViewController) {
-            NSLog(@"[WexPyq] Showing alert...");
-            logToFile(@"[WexPyq] Showing alert...");
-            [keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
+            
+            if (!keyWindow) {
+                keyWindow = [UIApplication sharedApplication].windows.firstObject;
+            }
+            
+            if (keyWindow && keyWindow.rootViewController) {
+                NSLog(@"[WexPyq] Presenting WexPyqMainController...");
+                logToFile(@"[WexPyq] Presenting WexPyqMainController...");
+                [keyWindow.rootViewController presentViewController:navController animated:YES completion:nil];
+            } else {
+                NSLog(@"[WexPyq] ERROR: No rootViewController found!");
+                logToFile(@"[WexPyq] ERROR: No rootViewController found!");
+            }
         } else {
-            NSLog(@"[WexPyq] ERROR: No rootViewController found!");
-            logToFile(@"[WexPyq] ERROR: No rootViewController found!");
+            NSLog(@"[WexPyq] ERROR: WexPyqMainController class not found!");
+            logToFile(@"[WexPyq] ERROR: WexPyqMainController class not found!");
+            
+            // 降级到alert
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"朋友圈查询" message:@"插件功能开发中" preferredStyle:UIAlertControllerStyleAlert];
+            [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
+            
+            UIWindow *keyWindow = nil;
+            if (@available(iOS 13.0, *)) {
+                NSSet<UIScene *> *scenes = [UIApplication sharedApplication].connectedScenes;
+                for (UIScene *scene in scenes) {
+                    if ([scene isKindOfClass:[UIWindowScene class]]) {
+                        UIWindowScene *windowScene = (UIWindowScene *)scene;
+                        for (UIWindow *window in windowScene.windows) {
+                            if (window.isKeyWindow) {
+                                keyWindow = window;
+                                break;
+                            }
+                        }
+                    }
+                    if (keyWindow) break;
+                }
+            }
+            
+            if (!keyWindow) {
+                keyWindow = [UIApplication sharedApplication].windows.firstObject;
+            }
+            
+            if (keyWindow && keyWindow.rootViewController) {
+                NSLog(@"[WexPyq] Showing alert (fallback)...");
+                logToFile(@"[WexPyq] Showing alert (fallback)...");
+                [keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
+            }
         }
     }
 }
