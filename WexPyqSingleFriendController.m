@@ -140,15 +140,35 @@
         Class CContactMgrClass = NSClassFromString(@"CContactMgr");
         if (CContactMgrClass) {
             // 尝试获取单例
-            id contactMgr = [CContactMgrClass performSelector:NSSelectorFromString(@"sharedManager")];
+            SEL sharedManagerSelector = NSSelectorFromString(@"sharedManager");
+            id contactMgr = nil;
+            if ([CContactMgrClass respondsToSelector:sharedManagerSelector]) {
+                contactMgr = [CContactMgrClass performSelector:sharedManagerSelector];
+            }
+            
             if (contactMgr) {
                 // 尝试获取好友列表
-                NSArray *allContacts = [contactMgr performSelector:NSSelectorFromString(@"getAllContacts")];
+                SEL getAllContactsSelector = NSSelectorFromString(@"getAllContacts");
+                NSArray *allContacts = nil;
+                if ([contactMgr respondsToSelector:getAllContactsSelector]) {
+                    allContacts = [contactMgr performSelector:getAllContactsSelector];
+                }
+                
                 if (allContacts && [allContacts isKindOfClass:[NSArray class]]) {
                     for (id contact in allContacts) {
                         // 尝试获取好友信息
-                        NSString *userName = [contact performSelector:NSSelectorFromString(@"userName")];
-                        NSString *nickName = [contact performSelector:NSSelectorFromString(@"nickName")];
+                        SEL userNameSelector = NSSelectorFromString(@"userName");
+                        SEL nickNameSelector = NSSelectorFromString(@"nickName");
+                        
+                        NSString *userName = nil;
+                        NSString *nickName = nil;
+                        
+                        if ([contact respondsToSelector:userNameSelector]) {
+                            userName = [contact performSelector:userNameSelector];
+                        }
+                        if ([contact respondsToSelector:nickNameSelector]) {
+                            nickName = [contact performSelector:nickNameSelector];
+                        }
                         
                         if (userName && nickName) {
                             // 排除特殊账号和自己
