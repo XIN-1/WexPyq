@@ -55,8 +55,37 @@ jobs:
       if: steps.cache-theos.outputs.cache-hit != 'true'
       run: |
         echo "Installing Theos..."
-        bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-        mv ~/theos ${{ github.workspace }}/theos
+        
+        # Set up retry function
+        retry() {
+          local n=0
+          local max=3
+          local delay=5
+          while true; do
+            "$@" && break || {
+              if [[ $n -lt $max ]]; then
+                ((n++))
+                echo "Command failed. Attempt $n/$max. Retrying in $delay seconds..."
+                sleep $delay
+              else
+                echo "The command has failed after $n attempts."
+                return 1
+              fi
+            }
+          done
+        }
+        
+        # Clone Theos with retry
+        retry git clone --recursive https://github.com/theos/theos.git $THEOS
+        
+        # Verify installation
+        if [ ! -d "$THEOS" ]; then
+          echo "ERROR: Theos installation failed"
+          exit 1
+        fi
+        
+        echo "Theos installed successfully"
+        ls -la $THEOS
     
     - name: Verify Theos installation
       run: |
@@ -64,6 +93,32 @@ jobs:
         ls -la $THEOS
         echo "Theos version:"
         cat $THEOS/VERSION 2>/dev/null || echo "No version file"
+    
+    - name: Setup iOS SDK
+      run: |
+        echo "Setting up iOS SDK..."
+        
+        # Check if SDK is available in Xcode
+        SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)
+        
+        if [ -n "$SDK_PATH" ] && [ -d "$SDK_PATH" ]; then
+          echo "iOS SDK found at: $SDK_PATH"
+          echo "SDK_VERSION=$(xcrun --sdk iphoneos --show-sdk-version)" >> $GITHUB_ENV
+          echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
+        else
+          echo "ERROR: iOS SDK not found"
+          echo "Available SDKs:"
+          xcodebuild -showsdks
+          exit 1
+        fi
+        
+        # Display SDK info
+        echo "=========================================="
+        echo "SDK Information"
+        echo "=========================================="
+        echo "SDK Path: $SDK_PATH"
+        echo "SDK Version: $(xcrun --sdk iphoneos --show-sdk-version)"
+        echo "=========================================="
     
     - name: Show build info
       run: |
