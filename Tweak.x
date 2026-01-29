@@ -177,7 +177,7 @@ static void addWexPyqButton() {
     wexPyqButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.48 blue:1.0 alpha:1.0];
     wexPyqButton.layer.cornerRadius = 25;
     wexPyqButton.titleLabel.font = [UIFont systemFontOfSize:24];
-    [wexPyqButton addTarget:self action:@selector(buttonTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [wexPyqButton addTarget:nil action:@selector(buttonTapped:) forControlEvents:UIControlEventTouchUpInside];
     
     [keyWindow addSubview:wexPyqButton];
     wexPyqButton.layer.zPosition = CGFLOAT_MAX;
@@ -193,6 +193,7 @@ void buttonTapped(UIButton *sender) {
 }
 
 @interface MMSettingViewController
+@property (nonatomic, strong) UIView *view;
 @end
 
 %hook MMSettingViewController
