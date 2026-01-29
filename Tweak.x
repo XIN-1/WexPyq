@@ -34,16 +34,13 @@ static void logToFile(NSString *message) {
     NSString *content = [NSString stringWithFormat:@"%@\n", timestamp];
     
     NSError *error = nil;
-    NSFileHandle *handle = [NSFileHandle fileHandleForWritingAtPath:logPath 
-                                                         createIfNotExist:YES];
-    if (!handle) {
-        NSLog(@"[WexPyq] Failed to open log file: %@", error);
-        return;
+    [content writeToFile:logPath 
+              atomically:YES 
+                encoding:NSUTF8StringEncoding 
+                   error:&error];
+    if (error) {
+        NSLog(@"[WexPyq] Failed to write log: %@", error);
     }
-    
-    [handle seekToEndOfFile];
-    [handle writeData:[content dataUsingEncoding:NSUTF8StringEncoding]];
-    [handle closeFile];
 }
 
 static void showWexPyqMenu() {
