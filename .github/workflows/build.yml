@@ -49,6 +49,15 @@ jobs:
         echo "GNU Make version:"
         $(brew --prefix make)/libexec/gnubin/make --version
     
+    - name: Install ldid
+      run: |
+        echo "Installing ldid for code signing..."
+        brew install ldid
+        
+        # Verify installation
+        echo "ldid version:"
+        ldid -v 2>&1 | head -1 || echo "ldid installed"
+    
     - name: Show Xcode version
       run: |
         xcodebuild -version
