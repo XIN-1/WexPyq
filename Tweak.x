@@ -178,7 +178,9 @@ static void addWexPyqButton() {
     [wexPyqButton addTarget:wexPyqButton action:@selector(buttonTapped:) forControlEvents:UIControlEventTouchUpInside];
     
     [keyWindow addSubview:wexPyqButton];
-    [wexPyqButton setZPosition:CGFLOAT_MAX];
+    
+    // Set button layer zPosition to make it appear on top
+    wexPyqButton.layer.zPosition = CGFLOAT_MAX;
     
     NSLog(@"[WexPyq] SUCCESS: Button added to window successfully at position: %@", NSStringFromCGRect(wexPyqButton.frame));
     logToFile([NSString stringWithFormat:@"[WexPyq] SUCCESS: Button added to window successfully at position: %@", NSStringFromCGRect(wexPyqButton.frame)]);
